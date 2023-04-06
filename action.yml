@@ -1,0 +1,51 @@
+name: 'ssh-agent'
+description: 'Load a key into in memory using a temp disk'
+inputs:
+  private_key:
+    description: 'SSH private key (usualy from secrets)'
+    required: true
+  auth_sock_path:
+    description: 'Path to the authentication socket'
+    required: false
+    default: 'S.agent.ssh'
+  auth_sock_name:
+    description: 'Name of the variable for authentication  socket'
+    required: false
+    default: SSH_AUTH_SOCK
+outputs:
+  public_key:
+    description: 'SSH public key if loaded'
+    value: ${{ steps.agent.outputs.public_key }}
+runs:
+  using: "composite"
+  steps:
+    - name: Create tmpfs to write the key
+      id: tmpfs
+      uses: LeastAuthority/mount-tmpfs-action@v1
+
+    - name: Start an agent with the key from tmpfs
+      id: agent
+      shell: bash
+      run: |
+        echo ":rocket: SSH agent operations started" >> $GITHUB_STEP_SUMMARY
+        # Import secret key in memory
+        cat <<EOF > "${{ steps.tmpfs.outputs.mnt }}/ssh_key"
+        ${{ inputs.private_key }}
+        EOF
+        chmod 0600 "${{ steps.tmpfs.outputs.mnt }}/ssh_key"
+        # Load key with agent
+        eval "$(ssh-agent -a ${{ inputs.auth_sock_path }} -s)" \
+        && echo ":heavy_check_mark: SSH agent creation succeeded" >> $GITHUB_STEP_SUMMARY \
+        || { echo ":x: SSH agent creation failed" >> $GITHUB_STEP_SUMMARY; exit 1; }
+        ssh-add "${{ steps.tmpfs.outputs.mnt }}/ssh_key" \
+        && echo ":heavy_check_mark: SSH key loading succeeded" >> $GITHUB_STEP_SUMMARY \
+        || { echo ":x: SSH key loading failed" >> $GITHUB_STEP_SUMMARY; exit 1; }
+        echo "pulbic_key=$(ssh-add -L)" >> $GITHUB_OUTPUT
+        # Export agent socket for later usage
+        echo "${{ inputs.auth_sock_name }}=${SSH_AUTH_SOCK}" >> $GITHUB_ENV
+
+    - name: Cleanup
+      id: cleanup
+      shell: bash
+      run: |
+        sudo umount "${{ steps.tmpfs.outputs.mnt }}"
