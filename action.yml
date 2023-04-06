@@ -5,11 +5,11 @@ inputs:
     description: 'SSH private key (usualy from secrets)'
     required: true
   auth_sock_path:
-    description: 'Path to SSH authentication socket'
+    description: 'Path to the authentication socket'
     required: false
     default: 'S.agent.ssh'
   auth_sock_name:
-    description: 'Variable name for the socket'
+    description: 'Name of the variable for authentication  socket'
     required: false
     default: SSH_AUTH_SOCK
 outputs:
@@ -19,11 +19,11 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Create temp disk
+    - name: Create tmpfs to write the key
       id: tmpfs
-      uses: LeastAuthority/mount-tmpfs@v1
+      uses: LeastAuthority/mount-tmpfs-action@v1
 
-    - name: Load ssh key in agent
+    - name: Start an agent with the key from tmpfs
       id: agent
       shell: bash
       run: |
@@ -44,7 +44,7 @@ runs:
         # Export agent socket for later usage
         echo "${{ inputs.auth_sock_name }}=${SSH_AUTH_SOCK}" >> $GITHUB_ENV
 
-    - name: Cleanup temp disk
+    - name: Cleanup
       id: cleanup
       shell: bash
       run: |
