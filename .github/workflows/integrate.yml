@@ -41,7 +41,7 @@ jobs:
         id: call
         uses: ./
         with:
-          private_key: "-----BEGIN OPENSSH PRIVATE KEY-----${{ env.PRIVATE_KEY }}-----END OPENSSH PRIVATE KEY-----"
+          private_key: "-----BEGIN OPENSSH PRIVATE KEY-----\n${{ env.PRIVATE_KEY }}\n-----END OPENSSH PRIVATE KEY-----"
         continue-on-error: true
 
       - name: Verify
@@ -52,9 +52,9 @@ jobs:
 
       - name: Proper exit
         run: |
-          if [ ${{ steps.call.outcome }} != 'success' \
-                -o ${{ steps.verify.outcome }} != 'success' \
-                -o ${{ steps.cleanup.outcome }} != 'success' ]
+          if [ ${{ steps.prepare.outcome }} != 'success'\
+                -o ${{ steps.call.outcome }} != 'success' \
+                -o ${{ steps.verify.outcome }} != 'success' ]
           then
             echo ":x: Test failed" >> $GITHUB_STEP_SUMMARY
             exit 1
