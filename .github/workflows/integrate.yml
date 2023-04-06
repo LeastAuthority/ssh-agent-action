@@ -41,10 +41,7 @@ jobs:
         id: call
         uses: ./
         with:
-          private_key: |
-          -----BEGIN OPENSSH PRIVATE KEY-----
-          ${{ env.PRIVATE_KEY }}
-          -----END OPENSSH PRIVATE KEY-----
+          private_key: "-----BEGIN OPENSSH PRIVATE KEY-----${{ env.PRIVATE_KEY }}-----END OPENSSH PRIVATE KEY-----"
         continue-on-error: true
 
       - name: Verify
