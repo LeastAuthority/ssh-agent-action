@@ -1,0 +1,66 @@
+name: Integration
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/integrate.yml'
+      - 'action.yml'
+  pull_request:
+    branches:    
+      - main
+    paths:
+      - '.github/workflows/integrate.yml'
+      - 'action.yml'
+env:
+  PRIVATE_KEY: |
+    b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+    QyNTUxOQAAACDvq9gH41Qo7q2KfHR1NOWTG2WF5l5cZdV/frtAym33hwAAAJhZuDVfWbg1
+    XwAAAAtzc2gtZWQyNTUxOQAAACDvq9gH41Qo7q2KfHR1NOWTG2WF5l5cZdV/frtAym33hw
+    AAAEBiA5tJB8LgLcMxh/5PY33nMQnxRUfz/PZOloFLQtM7Tu+r2AfjVCjurYp8dHU05ZMb
+    ZYXmXlxl1X9+u0DKbfeHAAAAFWJkb25uZWF1eEB0bGdtb2JkYjAwNw==
+  PUBLIC_KEY: |
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO+r2AfjVCjurYp8dHU05ZMbZYXmXlxl1X9+u0DKbfeH
+jobs:
+  test_defaults:
+    name: Test defaults
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Prepare key pairs
+        id: prepare
+        run: |
+          mkdir ~/.ssh && chmod 0700 .ssh
+          echo ${PUBLIC_KEY} >> ~/.ssh/authorized_keys
+          chmod 0600 ~/.ssh/authorized_keys
+          sudo systemctl status sshd || sudo systemctl start sshd
+
+      - name: Call action w/o inputs
+        id: call
+        uses: ./
+        with:
+          private_key: |
+          -----BEGIN OPENSSH PRIVATE KEY-----
+          ${{ env.PRIVATE_KEY }}
+          -----END OPENSSH PRIVATE KEY-----
+        continue-on-error: true
+
+      - name: Verify
+        id: verify
+        run: |
+          test $(ssh -a -x -o StrictHostKeyChecking=no $(whoami)@localhost whoami) = "$(whoami)"
+        continue-on-error: true
+
+      - name: Proper exit
+        run: |
+          if [ ${{ steps.call.outcome }} != 'success' \
+                -o ${{ steps.verify.outcome }} != 'success' \
+                -o ${{ steps.cleanup.outcome }} != 'success' ]
+          then
+            echo ":x: Test failed" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo ":heavy_check_mark: Test succeeded" >> $GITHUB_STEP_SUMMARY
+          fi
