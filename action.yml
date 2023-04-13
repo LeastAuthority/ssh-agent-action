@@ -48,7 +48,7 @@ runs:
         if [ ${{ steps.tmpfs.outcome }} == 'success' ]; then
           path_to_key="${{ steps.tmpfs.outputs.mnt }}/ssh_key"
         else
-          path_to_key="${{ inputs.private_key }}""
+          path_to_key="${{ inputs.private_key }}"
         fi
         # Load the key in the agent
         ssh-add "${path_to_key}" \
