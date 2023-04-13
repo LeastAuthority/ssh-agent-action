@@ -22,7 +22,7 @@ runs:
     - name: Create tmpfs to write the key
       id: tmpfs
       uses: LeastAuthority/mount-tmpfs-action@v1
-      if: startsWith(inputs.private_key) == '-----BEGIN OPENSSH PRIVATE KEY-----'
+      if: startsWith(inputs.private_key, '-----BEGIN OPENSSH PRIVATE KEY-----')
 
     - name: Write the key to tmpfs
       id: key_to_file
