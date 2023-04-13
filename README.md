@@ -15,6 +15,16 @@ It can be used as an attempt to keep the private ssh key from being written to d
         private_key: ${{ secrets.SSH_KEY }}
 ```
 
+Alternatively, assuming the private key file is available on the runner (e.g.: already in a tmpfs), the `private_key` input can be the path to that file.
+
+```yaml
+    - name: Load ssh key in agent
+      id: agent
+      uses: LeastAuthority/ssh-agent-action@v1
+      with:
+        private_key: /path/to/private_key
+```
+
 The action set a variable in the environment which can be used to find the socket to interact with the agent.
 By default, the name of the variable is `SSH_AUTH_SOCK` and the path to the socket is `S.agent.ssh`.
 Those can be changed respectively with the `auth_sock_name` and `auth_sock_path` inputs.
