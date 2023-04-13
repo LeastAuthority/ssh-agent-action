@@ -35,18 +35,16 @@ jobs:
           chmod 0600 ~/.ssh/authorized_keys
           sudo systemctl status sshd || sudo systemctl start sshd
 
-      - name: Call action w/o inputs
+      - name: Call action with key string
         id: call
         uses: ./
         with:
           private_key: "${{ steps.prepare.outputs.private_key }}"
-        continue-on-error: true
 
       - name: Verify
         id: verify
         run: |
           test $(ssh -a -x -o StrictHostKeyChecking=no $(whoami)@localhost whoami) = "$(whoami)"
-        continue-on-error: true
 
       - name: Proper exit
         run: |
@@ -59,3 +57,4 @@ jobs:
           else
             echo ":heavy_check_mark: Test succeeded" >> $GITHUB_STEP_SUMMARY
           fi
+        if: success() || failure()
