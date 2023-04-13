@@ -14,7 +14,7 @@ on:
       - '.github/workflows/integrate.yml'
       - 'action.yml'
 jobs:
-  test_defaults:
+  test_defaults_string:
     name: Test defaults with key string
     runs-on: ubuntu-latest
     steps:
@@ -59,7 +59,7 @@ jobs:
           fi
         if: success() || failure()
 
-  test_defaults:
+  test_defaults_file:
     name: Test defaults with key file
     runs-on: ubuntu-latest
     steps:
