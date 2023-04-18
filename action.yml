@@ -7,7 +7,7 @@ inputs:
   auth_sock_path:
     description: 'Path to the authentication socket'
     required: false
-    default: 'S.agent.ssh'
+    default: ${{ github.workspace }}/S.agent.ssh
   auth_sock_name:
     description: 'Name of the variable for authentication  socket'
     required: false
@@ -51,7 +51,7 @@ runs:
           exit 1
         }
         # Store key path for next step
-        echo "PRIVATE_KEY=\"${path_to_key}\"" >> $GITHUB_ENV
+        echo "PRIVATE_KEY=${path_to_key}" >> $GITHUB_ENV
 
     - name: Start an agent with the key
       id: agent
