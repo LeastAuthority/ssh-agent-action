@@ -1,5 +1,5 @@
 # ssh-agent
-GitHub action to load a key into in memory using a temp disk.
+GitHub action to load a key into in memory using a temp disk (tmpfs).
 
 It can be used as an attempt to keep the private ssh key from being written to disk.
 
@@ -15,7 +15,7 @@ It can be used as an attempt to keep the private ssh key from being written to d
         private_key: ${{ secrets.SSH_KEY }}
 ```
 
-Alternatively, assuming the private key file is available on the runner (e.g.: already in a tmpfs), the `private_key` input can be the path to that file.
+Alternatively, assuming that the `private_key` is already available as a file in an existing tmpfs (e.g. using [mount-tmpfs](https://github.com/LeastAuthority/mount-tmpfs-action)), the input can be the path to that file.
 
 ```yaml
     - name: Load ssh key in agent
