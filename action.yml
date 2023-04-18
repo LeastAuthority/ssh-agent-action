@@ -46,8 +46,8 @@ runs:
           path_to_key="${{ inputs.private_key }}"
         fi
         # Fail if key file in not on tmpfs!
-        df ${path_to_key} | tail -1 | grep "^tmpfs" || {
-          echo :x: private_key is not on tmpfs (consider revoking)!" >> $GITHUB_STEP_SUMMARY
+        df "${path_to_key}" | tail -1 | grep -q "^tmpfs" || {
+          echo :x: private_key is not on tmpfs (consider revoking)!" >> $GITHUB_STEP_SUMMARY;
           exit 1
         }
         # Store key path for next step
