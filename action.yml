@@ -35,6 +35,24 @@ runs:
         chmod 0600 "${{ steps.tmpfs.outputs.mnt }}/ssh_key"
       if: steps.tmpfs.outcome == 'success'
 
+    - name: Verify key file
+      id: verify
+      shell: bash
+      run: |
+        # Define path to key
+        if [ ${{ steps.tmpfs.outcome }} == 'success' ]; then
+          path_to_key="${{ steps.tmpfs.outputs.mnt }}/ssh_key"
+        else
+          path_to_key="${{ inputs.private_key }}"
+        fi
+        # Fail if key file in not on tmpfs!
+        df ${path_to_key} | tail -1 | grep "^tmpfs" || {
+          echo :x: private_key is not on tmpfs (consider revoking)!" >> $GITHUB_STEP_SUMMARY
+          exit 1
+        }
+        # Store key path for next step
+        echo "PRIVATE_KEY=\"${path_to_key}\"" >> $GITHUB_ENV
+
     - name: Start an agent with the key
       id: agent
       shell: bash
@@ -44,14 +62,8 @@ runs:
         eval "$(ssh-agent -a ${{ inputs.auth_sock_path }} -s)" \
         && echo ":heavy_check_mark: SSH agent creation succeeded" >> $GITHUB_STEP_SUMMARY \
         || { echo ":x: SSH agent creation failed" >> $GITHUB_STEP_SUMMARY; exit 1; }
-        # Define path to key
-        if [ ${{ steps.tmpfs.outcome }} == 'success' ]; then
-          path_to_key="${{ steps.tmpfs.outputs.mnt }}/ssh_key"
-        else
-          path_to_key="${{ inputs.private_key }}"
-        fi
         # Load the key in the agent
-        ssh-add "${path_to_key}" \
+        ssh-add "${{ env.PRIVATE_KEY }}" \
         && echo ":heavy_check_mark: SSH key loading succeeded" >> $GITHUB_STEP_SUMMARY \
         || { echo ":x: SSH key loading failed" >> $GITHUB_STEP_SUMMARY; exit 1; }
         echo "pulbic_key=$(ssh-add -L)" >> $GITHUB_OUTPUT
