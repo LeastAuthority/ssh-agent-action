@@ -26,13 +26,24 @@ Alternatively, assuming that the `private_key` is already available as a file in
 ```
 
 The action set a variable in the environment which can be used to find the socket to interact with the agent.
-By default, the name of the variable is `SSH_AUTH_SOCK` and the path to the socket is `S.agent.ssh`.
+By default, the name of the variable is `SSH_AUTH_SOCK` and the path to the socket is `${{ github.workspace }}/S.agent.ssh`.
 Those can be changed respectively with the `auth_sock_name` and `auth_sock_path` inputs.
 
 Without changing anything, most ssh client should now be able to use the key.
 
 ```yaml
-   - name: Test ssh connection
-     run: |
-       ssh -a -x -o StrictHostKeyChecking=no alice@server.example.com whoami
+    - name: Test ssh connection
+      run: |
+        ssh -a -x -o StrictHostKeyChecking=no alice@server.example.com  whoami
+```
+
+The ssh-agent can be re-used inside a docker container.
+
+```yaml
+    - name: Test ssh connectivity inside docker
+      run: |
+        docker run \
+        -e SSH_AUTH_SOCK=${SSH_AUTH_SOCK} \
+        -v ${SSH_AUTH_SOCK}:${SSH_AUTH_SOCK} \
+        codingkoopa/openssh ssh -a -x -o StrictHostKeyChecking=no alice@server.example.com whoami
 ```
