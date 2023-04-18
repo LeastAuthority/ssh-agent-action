@@ -130,11 +130,12 @@ jobs:
           chmod 0600 ~/.ssh/authorized_keys
           sudo systemctl status sshd || sudo systemctl start sshd
 
-      - name: Call action with key file
+      - name: Call action with unsafe key file
         id: call
         uses: ./
         with:
           private_key: "./test_key"
+        continue-on-error: true
 
       - name: Proper exit
         run: |
