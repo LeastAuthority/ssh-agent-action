@@ -22,22 +22,48 @@ runs:
     - name: Create tmpfs to write the key
       id: tmpfs
       uses: LeastAuthority/mount-tmpfs-action@v1
+      if: startsWith(inputs.private_key, '-----BEGIN OPENSSH PRIVATE KEY-----')
 
-    - name: Start an agent with the key from tmpfs
-      id: agent
+    - name: Write the key to tmpfs
+      id: key_to_file
       shell: bash
       run: |
-        echo ":rocket: SSH agent operations started" >> $GITHUB_STEP_SUMMARY
         # Import secret key in memory
         cat <<EOF > "${{ steps.tmpfs.outputs.mnt }}/ssh_key"
         ${{ inputs.private_key }}
         EOF
         chmod 0600 "${{ steps.tmpfs.outputs.mnt }}/ssh_key"
+      if: steps.tmpfs.outcome == 'success'
+
+    - name: Verify key file
+      id: verify
+      shell: bash
+      run: |
+        # Define path to key
+        if [ ${{ steps.tmpfs.outcome }} == 'success' ]; then
+          path_to_key="${{ steps.tmpfs.outputs.mnt }}/ssh_key"
+        else
+          path_to_key="${{ inputs.private_key }}"
+        fi
+        # Fail if key file in not on tmpfs!
+        df "${path_to_key}" | tail -1 | grep -q "^tmpfs" || {
+          echo ":x: File private_key is not on tmpfs: consider revoking!" >> $GITHUB_STEP_SUMMARY;
+          exit 1
+        }
+        # Store key path for next step
+        echo "PRIVATE_KEY=\"${path_to_key}\"" >> $GITHUB_ENV
+
+    - name: Start an agent with the key
+      id: agent
+      shell: bash
+      run: |
         # Load key with agent
+        echo ":rocket: SSH agent operations started" >> $GITHUB_STEP_SUMMARY
         eval "$(ssh-agent -a ${{ inputs.auth_sock_path }} -s)" \
         && echo ":heavy_check_mark: SSH agent creation succeeded" >> $GITHUB_STEP_SUMMARY \
         || { echo ":x: SSH agent creation failed" >> $GITHUB_STEP_SUMMARY; exit 1; }
-        ssh-add "${{ steps.tmpfs.outputs.mnt }}/ssh_key" \
+        # Load the key in the agent
+        ssh-add "${{ env.PRIVATE_KEY }}" \
         && echo ":heavy_check_mark: SSH key loading succeeded" >> $GITHUB_STEP_SUMMARY \
         || { echo ":x: SSH key loading failed" >> $GITHUB_STEP_SUMMARY; exit 1; }
         echo "pulbic_key=$(ssh-add -L)" >> $GITHUB_OUTPUT
@@ -49,3 +75,4 @@ runs:
       shell: bash
       run: |
         sudo umount "${{ steps.tmpfs.outputs.mnt }}"
+      if: steps.tmpfs.outcome == 'success'

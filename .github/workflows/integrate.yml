@@ -14,8 +14,8 @@ on:
       - '.github/workflows/integrate.yml'
       - 'action.yml'
 jobs:
-  test_defaults:
-    name: Test defaults
+  test_defaults_string:
+    name: Test defaults with key string
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -35,22 +35,20 @@ jobs:
           chmod 0600 ~/.ssh/authorized_keys
           sudo systemctl status sshd || sudo systemctl start sshd
 
-      - name: Call action w/o inputs
+      - name: Call action with key string
         id: call
         uses: ./
         with:
           private_key: "${{ steps.prepare.outputs.private_key }}"
-        continue-on-error: true
 
       - name: Verify
         id: verify
         run: |
           test $(ssh -a -x -o StrictHostKeyChecking=no $(whoami)@localhost whoami) = "$(whoami)"
-        continue-on-error: true
 
       - name: Proper exit
         run: |
-          if [ ${{ steps.prepare.outcome }} != 'success'\
+          if [ ${{ steps.prepare.outcome }} != 'success' \
                 -o ${{ steps.call.outcome }} != 'success' \
                 -o ${{ steps.verify.outcome }} != 'success' ]
           then
@@ -59,3 +57,94 @@ jobs:
           else
             echo ":heavy_check_mark: Test succeeded" >> $GITHUB_STEP_SUMMARY
           fi
+        if: success() || failure()
+
+  test_defaults_file:
+    name: Test defaults with key file
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Create tmpfs to write the key
+        id: tmpfs
+        uses: LeastAuthority/mount-tmpfs-action@v1
+
+      - name: Prepare key pairs
+        id: prepare
+        run: |
+          # Generate key pair
+          ssh-keygen -t ed25519 -f "${{ steps.tmpfs.outputs.mnt }}/test_key" -P ''
+          # Authorizing pub key
+          mkdir ~/.ssh && chmod 0700 ~/.ssh
+          cat "${{ steps.tmpfs.outputs.mnt }}/test_key.pub" >> ~/.ssh/authorized_keys
+          chmod 0600 ~/.ssh/authorized_keys
+          sudo systemctl status sshd || sudo systemctl start sshd
+
+      - name: Call action with key file
+        id: call
+        uses: ./
+        with:
+          private_key: "${{ steps.tmpfs.outputs.mnt }}/test_key"
+
+      - name: Cleanup
+        id: cleanup
+        shell: bash
+        run: |
+          sudo umount "${{ steps.tmpfs.outputs.mnt }}"
+        if: steps.tmpfs.outcome == 'success'
+
+      - name: Verify
+        id: verify
+        run: |
+          test $(ssh -a -x -o StrictHostKeyChecking=no $(whoami)@localhost whoami) = "$(whoami)"
+
+      - name: Proper exit
+        run: |
+          if [ ${{ steps.tmpfs.outcome }} != 'success' \
+                -o ${{ steps.prepare.outcome }} != 'success' \
+                -o ${{ steps.call.outcome }} != 'success' \
+                -o ${{ steps.verify.outcome }} != 'success' ]
+          then
+            echo ":x: Test failed" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo ":heavy_check_mark: Test succeeded" >> $GITHUB_STEP_SUMMARY
+          fi
+        if: success() || failure()
+
+  test_defaults_file_unsafe:
+    name: Test defaults with unsafe key file
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Prepare key pairs
+        id: prepare
+        run: |
+          # Generate key pair
+          ssh-keygen -t ed25519 -f ./test_key -P ''
+
+          # Authorizing pub key
+          mkdir ~/.ssh && chmod 0700 ~/.ssh
+          cat ./test_key.pub >> ~/.ssh/authorized_keys
+          chmod 0600 ~/.ssh/authorized_keys
+          sudo systemctl status sshd || sudo systemctl start sshd
+
+      - name: Call action with unsafe key file
+        id: call
+        uses: ./
+        with:
+          private_key: "./test_key"
+        continue-on-error: true
+
+      - name: Proper exit
+        run: |
+          if [ ${{ steps.prepare.outcome }} != 'success' \
+                -o ${{ steps.call.outcome }} != 'failure' ]
+          then
+            echo ":x: Test failed" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo ":heavy_check_mark: Test succeeded" >> $GITHUB_STEP_SUMMARY
+          fi
+        if: success() || failure()
