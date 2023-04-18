@@ -47,7 +47,7 @@ runs:
         fi
         # Fail if key file in not on tmpfs!
         df "${path_to_key}" | tail -1 | grep -q "^tmpfs" || {
-          echo ":x: private_key is not on tmpfs (consider revoking)!" >> $GITHUB_STEP_SUMMARY;
+          echo ":x: File private_key is not on tmpfs: consider revoking!" >> $GITHUB_STEP_SUMMARY;
           exit 1
         }
         # Store key path for next step
