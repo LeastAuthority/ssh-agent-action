@@ -86,6 +86,13 @@ jobs:
         with:
           private_key: "${{ steps.tmpfs.outputs.mnt }}/test_key"
 
+      - name: Cleanup
+        id: cleanup
+        shell: bash
+        run: |
+          sudo umount "${{ steps.tmpfs.outputs.mnt }}"
+        if: steps.tmpfs.outcome == 'success'
+
       - name: Verify
         id: verify
         run: |
